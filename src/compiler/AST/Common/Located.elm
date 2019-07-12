@@ -1,5 +1,5 @@
 module AST.Common.Located exposing
-    ( Located
+    ( Located(..)
     , Region
     , getRegion
     , located

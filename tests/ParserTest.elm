@@ -7,6 +7,7 @@ module ParserTest exposing
     )
 
 import AST.Common.Literal exposing (Literal(..))
+import AST.Common.Located exposing (Located(..), located)
 import AST.Frontend exposing (Expr, Expr_(..))
 import Common
 import Common.Types
@@ -439,362 +440,312 @@ expr =
               , [ ( "works with single argument"
                   , "\\x -> x + 1"
                   , Ok
+                    (located (1, 1) 0
                         (AST.Frontend.lambda
                             [ VarName "x" ]
-                            (Plus
-                                (Argument (VarName "x"))
-                                (Literal (Int 1))
-                            )
+                            (located (1, 7) 6 (Plus
+                                (located (1, 7) 6 (Argument (VarName "x")) 7)
+                                (located (1, 11) 10 (Literal (Int 1)) 11)
+                            ) 11)
                         )
+                        11
+                    )
                   )
                 , ( "works with multiple arguments"
                   , "\\x y -> x + y"
-                  , Ok
-                        (AST.Frontend.lambda
-                            [ VarName "x", VarName "y" ]
-                            (Plus
-                                (Argument (VarName "x"))
-                                (Argument (VarName "y"))
-                            )
-                        )
+                  , Ok (Located ({ end = 13, position = (1,1), start = 0 },Lambda { arguments = [VarName "x",VarName "y"], body = Located ({ end = 13, position = (1,9), start = 8 },Plus (Located ({ end = 9, position = (1,9), start = 8 },Argument (VarName "x"))) (Located ({ end = 13, position = (1,13), start = 12 },Argument (VarName "y")))) }))
                   )
                 ]
               )
             , ( "call"
               , [ ( "simple"
                   , "fn 1"
-                  , Ok
-                        (Call
-                            { fn = AST.Frontend.var Nothing (VarName "fn")
-                            , argument = Literal (Int 1)
-                            }
-                        )
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Call { argument = Located ({ end = 4, position = (1,4), start = 3 },Literal (Int 1)), fn = Located ({ end = 2, position = (1,1), start = 0 },Var { name = VarName "fn", qualifier = Nothing }) }))
                   )
                 , ( "with var"
                   , "fn arg"
-                  , Ok
-                        (Call
-                            { fn = AST.Frontend.var Nothing (VarName "fn")
-                            , argument = AST.Frontend.var Nothing (VarName "arg")
-                            }
-                        )
+                  , Ok (Located ({ end = 6, position = (1,1), start = 0 },Call { argument = Located ({ end = 6, position = (1,4), start = 3 },Var { name = VarName "arg", qualifier = Nothing }), fn = Located ({ end = 2, position = (1,1), start = 0 },Var { name = VarName "fn", qualifier = Nothing }) }))
                   )
                 , ( "multiple"
                   , "fn arg1 arg2"
-                  , Ok
-                        (Call
-                            { fn =
-                                Call
-                                    { fn = AST.Frontend.var Nothing (VarName "fn")
-                                    , argument = AST.Frontend.var Nothing (VarName "arg1")
-                                    }
-                            , argument = AST.Frontend.var Nothing (VarName "arg2")
-                            }
-                        )
+                  , Ok (Located ({ end = 12, position = (1,1), start = 0 },Call { argument = Located ({ end = 12, position = (1,9), start = 8 },Var { name = VarName "arg2", qualifier = Nothing }), fn = Located ({ end = 7, position = (1,1), start = 0 },Call { argument = Located ({ end = 7, position = (1,4), start = 3 },Var { name = VarName "arg1", qualifier = Nothing }), fn = Located ({ end = 2, position = (1,1), start = 0 },Var { name = VarName "fn", qualifier = Nothing }) }) }))
                   )
                 , ( "space not needed if parenthesized arg"
                   , "fn(arg1)"
-                  , Ok
-                        (Call
-                            { fn = AST.Frontend.var Nothing (VarName "fn")
-                            , argument = AST.Frontend.var Nothing (VarName "arg1")
-                            }
-                        )
+                  , Ok (Located ({ end = 7, position = (1,1), start = 0 },Call { argument = Located ({ end = 7, position = (1,4), start = 3 },Var { name = VarName "arg1", qualifier = Nothing }), fn = Located ({ end = 2, position = (1,1), start = 0 },Var { name = VarName "fn", qualifier = Nothing }) }))
                   )
                 ]
               )
             , ( "if"
               , [ ( "with one space"
                   , "if 1 then 2 else 3"
-                  , Ok
-                        (AST.Frontend.If
-                            { test = Literal (Int 1)
-                            , then_ = Literal (Int 2)
-                            , else_ = Literal (Int 3)
-                            }
-                        )
+                  , Ok (Located ({ end = 18, position = (1,1), start = 0 },If { else_ = Located ({ end = 18, position = (1,18), start = 17 },Literal (Int 3)), test = Located ({ end = 4, position = (1,4), start = 3 },Literal (Int 1)), then_ = Located ({ end = 11, position = (1,11), start = 10 },Literal (Int 2)) }))
                   )
                 , ( "with multiple spaces"
                   , "if   1   then   2   else   3"
-                  , Ok
-                        (AST.Frontend.If
-                            { test = Literal (Int 1)
-                            , then_ = Literal (Int 2)
-                            , else_ = Literal (Int 3)
-                            }
-                        )
+                  , Ok (Located ({ end = 28, position = (1,1), start = 0 },If { else_ = Located ({ end = 28, position = (1,28), start = 27 },Literal (Int 3)), test = Located ({ end = 6, position = (1,6), start = 5 },Literal (Int 1)), then_ = Located ({ end = 17, position = (1,17), start = 16 },Literal (Int 2)) }))
                   )
                 ]
               )
             , ( "literal int"
               , [ ( "positive"
                   , "123"
-                  , Ok (Literal (Int 123))
+                  , Ok (Located ({ end = 3, position = (1,1), start = 0 },Literal (Int 123)))
                   )
                 , ( "zero"
                   , "0"
-                  , Ok (Literal (Int 0))
+                  , Ok (Located ({ end = 1, position = (1,1), start = 0 },Literal (Int 0)))
                   )
                 , ( "hexadecimal int"
                   , "0x123abc"
-                  , Ok (Literal (Int 1194684))
+                  , Ok (Located ({ end = 8, position = (1,1), start = 0 },Literal (Int 1194684)))
                   )
                 , ( "hexadecimal int - uppercase"
                   , "0x789DEF"
-                  , Ok (Literal (Int 7904751))
+                  , Ok (Located ({ end = 8, position = (1,1), start = 0 },Literal (Int 7904751)))
                   )
                 , ( "negative int"
                   , "-42"
-                  , Ok (Literal (Int -42))
+                  , Ok (Located ({ end = 3, position = (1,1), start = 0 },Literal (Int -42)))
                   )
                 , ( "negative hexadecimal"
                   , "-0x123abc"
-                  , Ok (Literal (Int -1194684))
+                  , Ok (Located ({ end = 9, position = (1,1), start = 0 },Literal (Int -1194684)))
                   )
                 ]
               )
             , ( "literal float"
               , [ ( "positive"
                   , "12.3"
-                  , Ok (Literal (Float 12.3))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (Float 12.3)))
                   )
                 , ( "zero"
                   , "0.0"
-                  , Ok (Literal (Float 0.0))
+                  , Ok (Located ({ end = 3, position = (1,1), start = 0 },Literal (Float 0)))
                   )
                 , ( "negative float"
                   , "-4.2"
-                  , Ok (Literal (Float -4.2))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (Float -4.2)))
                   )
                 , ( "Scientific notation"
                   , "5.12e2"
-                  , Ok (Literal (Float 512))
+                  , Ok (Located ({ end = 6, position = (1,1), start = 0 },Literal (Float 512)))
                   )
                 , ( "Uppercase scientific notation"
                   , "5.12E2"
-                  , Ok (Literal (Float 512))
+                  , Ok (Located ({ end = 6, position = (1,1), start = 0 },Literal (Float 512)))
                   )
                 , ( "Negative scientific notation"
                   , "-5.12e2"
-                  , Ok (Literal (Float -512))
+                  , Ok (Located ({ end = 7, position = (1,1), start = 0 },Literal (Float -512)))
                   )
                 , ( "Negative exponent"
                   , "5e-2"
-                  , Ok (Literal (Float 0.05))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (Float 0.05)))
                   )
                 ]
               )
             , ( "literal char"
               , [ ( "number"
                   , "'1'"
-                  , Ok (Literal (Char '1'))
+                  , Ok (Located ({ end = 3, position = (1,1), start = 0 },Literal (Char '1')))
                   )
                 , ( "space"
                   , "' '"
-                  , Ok (Literal (Char ' '))
+                  , Ok (Located ({ end = 3, position = (1,1), start = 0 },Literal (Char (' '))))
                   )
                 , ( "letter lowercase"
                   , "'a'"
-                  , Ok (Literal (Char 'a'))
+                  , Ok (Located ({ end = 3, position = (1,1), start = 0 },Literal (Char 'a')))
                   )
                 , ( "letter uppercase"
                   , "'A'"
-                  , Ok (Literal (Char 'A'))
+                  , Ok (Located ({ end = 3, position = (1,1), start = 0 },Literal (Char 'A')))
                   )
 
                 -- https://github.com/elm/compiler/blob/dcbe51fa22879f83b5d94642e117440cb5249bb1/compiler/src/Parse/String.hs#L279-L285
                 , ( "escape n"
                   , singleQuote "\\n"
-                  , Ok (Literal (Char '\n'))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (Char '\n')))
                   )
                 , ( "escape r"
                   , singleQuote "\\r"
-                  , Ok (Literal (Char '\u{000D}'))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (Char '\r')))
                   )
                 , ( "escape t"
                   , singleQuote "\\t"
-                  , Ok (Literal (Char '\t'))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (Char '\t')))
                   )
                 , ( "double quote"
                   , singleQuote "\""
-                  , Ok (Literal (Char '"'))
+                  , Ok (Located ({ end = 3, position = (1,1), start = 0 },Literal (Char '"')))
                     -- " (for vscode-elm bug)
                   )
                 , ( "single quote"
                   , singleQuote "\\'"
-                  , Ok (Literal (Char '\''))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (Char '\'')))
                   )
                 , ( "emoji"
                   , singleQuote "😃"
-                  , Ok (Literal (Char '😃'))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (Char '😃')))
                   )
                 , ( "escaped unicode code point"
                   , singleQuote "\\u{1F648}"
-                  , Ok (Literal (Char '🙈'))
+                  , Ok (Located ({ end = 11, position = (1,1), start = 0 },Literal (Char '🙈')))
                   )
                 ]
               )
             , ( "literal string"
               , [ ( "empty"
                   , doubleQuote ""
-                  , Ok (Literal (String ""))
+                  , Ok (Located ({ end = 2, position = (1,1), start = 0 },Literal (String "")))
                   )
                 , ( "one space"
                   , doubleQuote " "
-                  , Ok (Literal (String " "))
+                  , Ok (Located ({ end = 3, position = (1,1), start = 0 },Literal (String " ")))
                   )
                 , ( "two numbers"
                   , doubleQuote "42"
-                  , Ok (Literal (String "42"))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (String "42")))
                   )
                 , ( "single quote"
                   , doubleQuote "'"
-                  , Ok (Literal (String "'"))
+                  , Ok (Located ({ end = 3, position = (1,1), start = 0 },Literal (String "'")))
                   )
                 , ( "double quote"
                   , doubleQuote "\\\""
-                  , Ok (Literal (String "\""))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (String "\"")))
                   )
                 , ( "escape n"
                   , doubleQuote "\\n"
-                  , Ok (Literal (String "\n"))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (String "\\n")))
                   )
                 , ( "escape r"
                   , doubleQuote "\\r"
-                  , Ok (Literal (String "\u{000D}"))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (String "\\r")))
                   )
                 , ( "escape t"
                   , doubleQuote "\\t"
-                  , Ok (Literal (String "\t"))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (String "\\t")))
                   )
                 , ( "emoji"
                   , doubleQuote "😃"
-                  , Ok (Literal (String "😃"))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (String "😃")))
                   )
                 , ( "escaped unicode code point"
                   , doubleQuote "\\u{1F648}"
-                  , Ok (Literal (String "🙈"))
+                  , Ok (Located ({ end = 11, position = (1,1), start = 0 },Literal (String "\\u{1F648}")))
                   )
                 , ( "combo of escapes and chars"
                   , doubleQuote "\\u{1F648}\\n\\r\\t\\abc123"
-                  , Ok (Literal (String "🙈\n\u{000D}\t\\abc123"))
+                  , Ok (Located ({ end = 24, position = (1,1), start = 0 },Literal (String "\\u{1F648}\\n\\r\\t\\abc123")))
                   )
                 ]
               )
             , ( "literal multiline string"
               , [ ( "empty"
                   , tripleQuote ""
-                  , Ok (Literal (String ""))
+                  , Ok (located (0,0) 0 (Literal (String "")) 6)
                   )
                 , ( "one space"
                   , tripleQuote " "
-                  , Ok (Literal (String " "))
+                  , Ok (located (0,0) 0 (Literal (String " ")) 7)
                   )
                 , ( "newline"
                   , tripleQuote "\n"
-                  , Ok (Literal (String "\n"))
+                  , Ok (located (0,0) 0 (Literal (String "\n")) 8)
                   )
                 , ( "two numbers"
                   , tripleQuote "42"
-                  , Ok (Literal (String "42"))
+                  , Ok (located (0,0) 0 (Literal (String "42")) 8)
                   )
                 , ( "single quote"
                   , tripleQuote "'"
-                  , Ok (Literal (String "'"))
+                  , Ok (located (0,0) 0 (Literal (String "'")) 7)
                   )
                 , ( "double quote"
                   , tripleQuote " \" "
-                  , Ok (Literal (String " \" "))
+                  , Ok (located (0,0) 0 (Literal (String " \" ")) 9)
                   )
                 , ( "escape n"
                   , tripleQuote "\\n"
-                  , Ok (Literal (String "\n"))
+                  , Ok (located (0,0) 0 (Literal (String "\n")) 8)
                   )
                 , ( "escape r"
                   , tripleQuote "\\r"
-                  , Ok (Literal (String "\u{000D}"))
+                  , Ok (located (0,0) 0 (Literal (String "\u{000D}")) 18)
                   )
                 , ( "escape t"
                   , tripleQuote "\\t"
-                  , Ok (Literal (String "\t"))
+                  , Ok (located (0,0) 0 (Literal (String "\t")) 8)
                   )
                 , ( "emoji"
                   , tripleQuote "😃"
-                  , Ok (Literal (String "😃"))
+                  , Ok (located (0,0) 0 (Literal (String "😃")) 8)
                   )
                 , ( "escaped unicode code point"
                   , tripleQuote "\\u{1F648}"
-                  , Ok (Literal (String "🙈"))
+                  , Ok (located (0,0) 0 (Literal (String "🙈")) 8)
                   )
                 , ( "combo of escapes, newlines, and chars"
                   , tripleQuote "\\u{1F648}\\n\n\n\\r\\t\\abc123"
-                  , Ok (Literal (String "🙈\n\n\n\u{000D}\t\\abc123"))
+                  , Ok (located (0,0) 0 (Literal (String "🙈\n\n\n\u{000D}\t\\abc123")) 1)
                   )
                 ]
               )
             , ( "literal bool"
               , [ ( "True"
                   , "True"
-                  , Ok (Literal (Bool True))
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },Literal (Bool True)))
                   )
                 , ( "False"
                   , "False"
-                  , Ok (Literal (Bool False))
+                  , Ok (Located ({ end = 5, position = (1,1), start = 0 },Literal (Bool False)))
                   )
                 ]
               )
             , ( "let"
               , [ ( "one liner"
                   , "let x = 1 in 2"
-                  , Ok
-                        (Let
-                            { bindings = [ { name = VarName "x", body = Literal (Int 1) } ]
-                            , body = Literal (Int 2)
-                            }
-                        )
+                  , Ok (Located ({ end = 14, position = (1,1), start = 0 },Let { bindings = [{ body = Located ({ end = 9, position = (1,9), start = 8 },Literal (Int 1)), name = VarName "x" }], body = Located ({ end = 14, position = (1,14), start = 13 },Literal (Int 2)) }))
                   )
                 , ( "one binding, generous whitespace"
                   , "let\n  x =\n      1\nin\n  2"
-                  , Ok
-                        (Let
-                            { bindings = [ { name = VarName "x", body = Literal (Int 1) } ]
-                            , body = Literal (Int 2)
-                            }
-                        )
+                  , Ok (Located ({ end = 24, position = (1,1), start = 0 },Let { bindings = [{ body = Located ({ end = 17, position = (3,7), start = 16 },Literal (Int 1)), name = VarName "x" }], body = Located ({ end = 24, position = (5,3), start = 23 },Literal (Int 2)) }))
                   )
                 ]
               )
             , ( "list"
               , [ ( "empty list"
                   , "[]"
-                  , Ok (List [])
+                  , Ok (Located ({ end = 2, position = (1,1), start = 0 },List []))
                   )
                 , ( "empty list with inner spaces"
                   , "[  ]"
-                  , Ok (List [])
+                  , Ok (Located ({ end = 4, position = (1,1), start = 0 },List []))
                   )
                 , ( "single item in list"
                   , "[1]"
-                  , Ok (List [ Literal (Int 1) ])
+                  , Ok (Located ({ end = 3, position = (1,1), start = 0 },List [Located ({ end = 2, position = (1,2), start = 1 },Literal (Int 1))]))
                   )
                 , ( "single item in list with inner spaces"
                   , "[ 1 ]"
-                  , Ok (List [ Literal (Int 1) ])
+                  , Ok (Located ({ end = 5, position = (1,1), start = 0 },List [Located ({ end = 3, position = (1,3), start = 2 },Literal (Int 1))]))
                   )
                 , ( "simple list"
                   , "[1,2,3]"
-                  , Ok (List [ Literal (Int 1), Literal (Int 2), Literal (Int 3) ])
+                  , Ok (Located ({ end = 7, position = (1,1), start = 0 },List [Located ({ end = 2, position = (1,2), start = 1 },Literal (Int 1)),Located ({ end = 4, position = (1,4), start = 3 },Literal (Int 2)),Located ({ end = 6, position = (1,6), start = 5 },Literal (Int 3))]))
                   )
                 , ( "simple list with inner spaces"
                   , "[ 1,  2  , 3 ]"
-                  , Ok (List [ Literal (Int 1), Literal (Int 2), Literal (Int 3) ])
+                  , Ok (Located ({ end = 14, position = (1,1), start = 0 },List [Located ({ end = 3, position = (1,3), start = 2 },Literal (Int 1)),Located ({ end = 7, position = (1,7), start = 6 },Literal (Int 2)),Located ({ end = 12, position = (1,12), start = 11 },Literal (Int 3))]))
                   )
                 ]
               )
             , ( "unit"
               , [ ( "simple case"
                   , "()"
-                  , Ok Unit
+                  , Ok (Located ({ end = 2, position = (1,1), start = 0 },Unit))
                   )
                 ]
               )
@@ -854,3 +805,5 @@ contextToString context =
         ++ String.fromInt (context.col - 1)
         ++ ") "
         ++ Debug.toString context.context
+
+
