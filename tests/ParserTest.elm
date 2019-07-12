@@ -7,7 +7,7 @@ module ParserTest exposing
     )
 
 import AST.Common.Literal exposing (Literal(..))
-import AST.Frontend exposing (Expr(..))
+import AST.Frontend exposing (Expr, Expr_(..))
 import Common
 import Common.Types
     exposing

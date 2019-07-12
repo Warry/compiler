@@ -2,6 +2,7 @@ module Stage.InferTypes exposing (inferExpr, inferTypes)
 
 import AST.Canonical as Canonical
 import AST.Common.Type as Type exposing (Type)
+import AST.Common.Located as Located
 import AST.Typed as Typed
 import Common.Types exposing (Project)
 import Error exposing (Error(..), TypeError(..))
@@ -74,14 +75,15 @@ from the bottom up.
 -}
 substituteAllTypes : Typed.Expr -> SubstitutionMap -> Typed.Expr
 substituteAllTypes expr substitutionMap =
-    Typed.transformOnce
-        (substituteType substitutionMap)
+    Located.map
+        (Typed.transformOnce
+            (substituteType substitutionMap)
+        )
         expr
-
 
 {-| Only care about this level, don't recurse
 -}
-substituteType : SubstitutionMap -> Typed.Expr -> Typed.Expr
+substituteType : SubstitutionMap -> (Typed.Expr_, Type) -> (Typed.Expr_, Type)
 substituteType substitutionMap ( expr, type_ ) =
     ( expr, getBetterType substitutionMap type_ )
 

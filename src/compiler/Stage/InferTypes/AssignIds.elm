@@ -41,6 +41,7 @@ Output:
 
 import AST.Canonical as Canonical
 import AST.Common.Type as Type
+import AST.Common.Located as Located
 import AST.Typed as Typed
 import Common
 import Dict.Any
@@ -57,9 +58,9 @@ assignIdsWith idSource expr =
     let
         wrap : IdSource -> Typed.Expr_ -> ( Typed.Expr, IdSource )
         wrap idSource_ expr_ =
-            IdSource.one idSource_ (\id -> ( expr_, Type.Var id ))
+            IdSource.one idSource_ (\id -> Located.map (always ( expr_, Type.Var id )) expr)
     in
-    case expr of
+    case Located.unwrap expr of
         {- With literals, we could plug their final type in right here
            (no solving needed!) but let's be uniform and do everything through
            the constraint solver in stages 2 and 3.

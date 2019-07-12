@@ -9,7 +9,7 @@ module Stage.Parse.Parser exposing
 
 import AST.Common.Literal exposing (Literal(..))
 import AST.Common.Located as Located exposing (Located)
-import AST.Frontend as Frontend exposing (Expr(..))
+import AST.Frontend as Frontend exposing (Expr, Expr_(..))
 import Common
 import Common.Types
     exposing
@@ -351,17 +351,18 @@ expr =
             -- TODO test this: does `x =\n  call 1\n+ something` work? (it shouldn't: no space before '+')
             [ PP.infixLeft 99
                 checkNotBeginningOfLine
-                (\fn argument ->
+                (Located.wrap2 (\fn argument ->
                     Frontend.Call
                         { fn = fn
                         , argument = argument
                         }
-                )
-            , PP.infixLeft 1 (P.symbol (P.Token "+" ExpectingPlusOperator)) Plus
+                ))
+            , PP.infixLeft 1 (P.symbol (P.Token "+" ExpectingPlusOperator)) (Located.wrap2 Plus)
             ]
         , spaces = P.spaces
         }
         |> P.inContext InExpr
+
 
 
 checkNotBeginningOfLine : Parser_ ()
@@ -395,6 +396,7 @@ literal =
             , literalBool
             ]
         |> P.inContext InLiteral
+        |> located
 
 
 literalNumber : Parser_ Literal
@@ -528,6 +530,7 @@ var =
             varName
         , qualifiedVar
         ]
+        |> located
 
 
 varName : Parser_ String
@@ -540,7 +543,7 @@ varName =
         }
 
 
-qualifiedVar : Parser_ Expr
+qualifiedVar : Parser_ Expr_
 qualifiedVar =
     P.sequence
         { start = P.Token "" (CompilerBug "qualifiedVar start parser failed") -- TODO is this the right way?
@@ -588,7 +591,7 @@ lambda config =
 
                    TODO add a fuzz test for this invariant?
                 -}
-                (Frontend.transform (promoteArguments arguments) body)
+                (Located.map (Frontend.transform (promoteArguments arguments)) body)
         )
         |. P.symbol (P.Token "\\" ExpectingBackslash)
         |= manyWith spacesOnly (P.map VarName varName)
@@ -597,6 +600,7 @@ lambda config =
         |. P.spaces
         |= PP.subExpression 0 config
         |> P.inContext InLambda
+        |> located
 
 
 if_ : ExprConfig -> Parser_ Frontend.Expr
@@ -616,6 +620,7 @@ if_ config =
         |. P.keyword (P.Token "else" ExpectingElse)
         |= PP.subExpression 0 config
         |> P.inContext InIf
+        |> located
 
 
 let_ : ExprConfig -> Parser_ Frontend.Expr
@@ -636,6 +641,7 @@ let_ config =
         |. P.spaces
         |= PP.subExpression 0 config
         |> P.inContext InLet
+        |> located
 
 
 binding : ExprConfig -> Parser_ (Binding Frontend.Expr)
@@ -649,7 +655,7 @@ binding config =
         |> P.inContext InLetBinding
 
 
-promoteArguments : List VarName -> Frontend.Expr -> Frontend.Expr
+promoteArguments : List VarName -> Frontend.Expr_ -> Frontend.Expr_
 promoteArguments arguments expr_ =
     -- TODO set of arguments instead of list?
     case expr_ of
@@ -669,6 +675,7 @@ unit _ =
     P.succeed Frontend.Unit
         |. P.keyword (P.Token "()" ExpectingUnit)
         |> P.inContext InUnit
+        |> located
 
 
 list : ExprConfig -> Parser_ Frontend.Expr
@@ -683,6 +690,7 @@ list config =
             , trailing = P.Forbidden
             }
         |> P.inContext InList
+        |> located
 
 
 

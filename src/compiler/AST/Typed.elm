@@ -8,6 +8,9 @@ module AST.Typed exposing
     , recursiveChildren
     , transformAll
     , transformOnce
+    , mapTyped
+    , getExpr
+    , getType
     )
 
 import AST.Common.Literal exposing (Literal)
@@ -37,7 +40,11 @@ TODO make this opaque, add accessors etc.
 
 -}
 type alias Expr =
-    Located ( Expr_, Type )
+    Located Typed
+
+
+type alias Typed =
+    ( Expr_, Type )
 
 
 type Expr_
@@ -74,71 +81,73 @@ let_ bindings body =
 
 {-| A helper for the Transform library.
 -}
-recurse : (Expr -> Expr) -> Expr -> Expr
-recurse f ( expr, type_ ) =
-    ( case expr of
+recurse : (Typed -> Typed) -> Typed -> Typed
+recurse f (expr_, type_) =
+    ( case expr_ of
         Literal _ ->
-            expr
+            expr_
 
         Var _ ->
-            expr
+            expr_
 
         Argument _ ->
-            expr
+            expr_
 
         Plus e1 e2 ->
-            Plus (f e1) (f e2)
+            Plus
+                (Located.map f e1)
+                (Located.map f e2)
 
         Lambda ({ body } as lambda_) ->
-            Lambda { lambda_ | body = f body }
+            Lambda { lambda_ | body = Located.map f body }
 
         Call { fn, argument } ->
             Call
-                { fn = f fn
-                , argument = f argument
+                { fn = Located.map f fn
+                , argument = Located.map f argument
                 }
 
         If { test, then_, else_ } ->
             If
-                { test = f test
-                , then_ = f then_
-                , else_ = f else_
+                { test = Located.map f test
+                , then_ = Located.map f then_
+                , else_ = Located.map f else_
                 }
 
         Let { bindings, body } ->
             Let
-                { bindings = Dict.Any.map (always (Common.mapBinding f)) bindings
-                , body = f body
+                { bindings = Dict.Any.map (always (Common.mapBinding (Located.map f))) bindings
+                , body = Located.map f body
                 }
 
         List items ->
-            List (List.map f items)
+            List (List.map (Located.map f) items)
 
         Unit ->
-            expr
+            expr_
     , type_
     )
 
 
-transformOnce : (Expr -> Expr) -> Expr -> Expr
-transformOnce pass expr =
+transformOnce : (Typed -> Typed) -> Typed -> Typed
+transformOnce pass expr_ =
     Transform.transformOnce
         recurse
         pass
-        expr
+        expr_
 
 
-transformAll : List (Expr -> Maybe Expr) -> Expr -> Expr
-transformAll passes expr =
+transformAll : List (Typed -> Maybe Typed) -> Typed -> Typed
+transformAll passes expr_ =
     Transform.transformAll
         recurse
         (Transform.orList passes)
-        expr
+        expr_
 
 
 isArgument : VarName -> Expr -> Bool
-isArgument name ( expr_, _ ) =
-    case expr_ of
+isArgument name expr =
+    case getExpr expr of
         Argument argName ->
             argName == name
 
@@ -147,8 +156,11 @@ isArgument name ( expr_, _ ) =
 
 
 recursiveChildren : (Expr -> List Expr) -> Expr -> List Expr
-recursiveChildren fn ( expr, _ ) =
-    case expr of
+recursiveChildren fn expr =
+    let
+        expr_ = getExpr expr
+    in
+    case expr_ of
         Literal _ ->
             []
 
@@ -183,3 +195,19 @@ recursiveChildren fn ( expr, _ ) =
 
         List items ->
             List.concatMap fn items
+
+
+mapTyped : (a -> b) -> Located ( a, c ) -> Located ( b, c )
+mapTyped =
+    Located.map << Tuple.mapFirst
+
+
+getExpr : Located ( a, b ) -> a
+getExpr =
+    Tuple.first << Located.unwrap
+
+
+getType : Located ( a, b ) -> b
+getType =
+    Tuple.second << Located.unwrap
+

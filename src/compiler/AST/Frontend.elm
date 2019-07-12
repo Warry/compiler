@@ -1,5 +1,6 @@
 module AST.Frontend exposing
-    ( Expr(..)
+    ( Expr
+    , Expr_(..)
     , ProjectFields
     , lambda
     , transform
@@ -20,12 +21,7 @@ import Transform
 
 
 type alias ProjectFields =
-    Located { modules : Modules Expr }
-
-
-projectFields : Modules Expr -> { modules : Modules Expr }
-projectFields m =
-    { modules = m }
+    { modules : Modules Expr }
 
 
 type alias Expr =
@@ -45,7 +41,7 @@ type Expr_
     | Unit
 
 
-var : Maybe ModuleName -> VarName -> Expr
+var : Maybe ModuleName -> VarName -> Expr_
 var qualifier name =
     Var
         { qualifier = qualifier
@@ -53,7 +49,7 @@ var qualifier name =
         }
 
 
-lambda : List VarName -> Expr -> Expr
+lambda : List VarName -> Expr -> Expr_
 lambda arguments body =
     Lambda
         { arguments = arguments
@@ -80,7 +76,7 @@ lambda arguments body =
 
 {-| A helper for the Transform library.
 -}
-recurse : (Expr -> Expr) -> Expr -> Expr
+recurse : (Expr_ -> Expr_) -> Expr_ -> Expr_
 recurse f expr =
     case expr of
         Literal _ ->
@@ -93,38 +89,40 @@ recurse f expr =
             expr
 
         Plus e1 e2 ->
-            Plus (f e1) (f e2)
+            Plus
+                (Located.map f e1)
+                (Located.map f e2)
 
         Lambda ({ body } as lambda_) ->
-            Lambda { lambda_ | body = f body }
+            Lambda { lambda_ | body = Located.map f body }
 
         Call { fn, argument } ->
             Call
-                { fn = f fn
-                , argument = f argument
+                { fn = Located.map f fn
+                , argument = Located.map f argument
                 }
 
         If { test, then_, else_ } ->
             If
-                { test = f test
-                , then_ = f then_
-                , else_ = f else_
+                { test = Located.map f test
+                , then_ = Located.map f then_
+                , else_ = Located.map f else_
                 }
 
         Let { bindings, body } ->
             Let
-                { bindings = List.map (Common.mapBinding f) bindings
-                , body = f body
+                { bindings = List.map (Common.mapBinding (Located.map f)) bindings
+                , body = Located.map f body
                 }
 
         List items ->
-            List (List.map f items)
+            List (List.map (Located.map f) items)
 
         Unit ->
             expr
 
 
-transform : (Expr -> Expr) -> Expr -> Expr
+transform : (Expr_ -> Expr_) -> Expr_ -> Expr_
 transform pass expr =
     {- If we do more than one at the same time, we should use the Transform
        library a bit differently, see `Transform.orList`.

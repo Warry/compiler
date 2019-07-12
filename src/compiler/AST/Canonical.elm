@@ -1,5 +1,6 @@
 module AST.Canonical exposing
-    ( Expr(..)
+    ( Expr
+    , Expr_(..)
     , ProjectFields
     , lambda
     , var
@@ -38,7 +39,7 @@ type Expr_
     | Unit
 
 
-var : ModuleName -> VarName -> Expr
+var : ModuleName -> VarName -> Expr_
 var qualifier name =
     Var
         { qualifier = qualifier
@@ -46,7 +47,7 @@ var qualifier name =
         }
 
 
-lambda : VarName -> Expr -> Expr
+lambda : VarName -> Expr -> Expr_
 lambda argument body =
     Lambda
         { argument = argument

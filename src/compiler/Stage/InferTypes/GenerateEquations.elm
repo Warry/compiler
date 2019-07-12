@@ -31,6 +31,7 @@ subexpression.
 
 import AST.Common.Literal as Literal
 import AST.Common.Type as Type
+import AST.Common.Located as Located
 import AST.Typed as Typed
 import Common.Types exposing (VarName)
 import Dict.Any
@@ -40,7 +41,10 @@ import Transform
 
 
 generateEquations : IdSource -> Typed.Expr -> ( List TypeEquation, IdSource )
-generateEquations idSource ( expr, type_ ) =
+generateEquations idSource located_ =
+    let
+        ( expr, type_ ) = Located.unwrap located_
+    in
     case expr of
         Typed.Literal (Literal.Int _) ->
             -- integer is an integer ¯\_(ツ)_/¯
@@ -83,10 +87,10 @@ generateEquations idSource ( expr, type_ ) =
         Typed.Plus left right ->
             let
                 ( _, leftType ) =
-                    left
+                    Located.unwrap left
 
                 ( _, rightType ) =
-                    right
+                    Located.unwrap right
 
                 ( leftEquations, idSource1 ) =
                     generateEquations idSource left
@@ -107,7 +111,7 @@ generateEquations idSource ( expr, type_ ) =
         Typed.Lambda { body, argument } ->
             let
                 ( _, bodyType ) =
-                    body
+                    Located.unwrap body
 
                 ( argumentId, idSource1 ) =
                     IdSource.increment idSource
@@ -132,10 +136,10 @@ generateEquations idSource ( expr, type_ ) =
         Typed.Call { fn, argument } ->
             let
                 ( _, fnType ) =
-                    fn
+                    Located.unwrap fn
 
                 ( _, argumentType ) =
-                    argument
+                    Located.unwrap argument
 
                 ( fnEquations, idSource1 ) =
                     generateEquations idSource fn
@@ -154,13 +158,13 @@ generateEquations idSource ( expr, type_ ) =
         Typed.If { test, then_, else_ } ->
             let
                 ( _, testType ) =
-                    test
+                    Located.unwrap test
 
                 ( _, thenType ) =
-                    then_
+                    Located.unwrap then_
 
                 ( _, elseType ) =
-                    else_
+                    Located.unwrap else_
 
                 ( testEquations, idSource1 ) =
                     generateEquations idSource test
@@ -185,7 +189,7 @@ generateEquations idSource ( expr, type_ ) =
         Typed.Let { bindings, body } ->
             let
                 ( _, bodyType ) =
-                    body
+                    Located.unwrap body
 
                 ( bodyEquations, idSource1 ) =
                     generateEquations idSource body
@@ -228,8 +232,10 @@ generateEquations idSource ( expr, type_ ) =
 
                 ( bodyEquations, idSource2 ) =
                     List.foldr
-                        (\(( _, itemType ) as item) ( acc, currentIdSource ) ->
+                        (\item ( acc, currentIdSource ) ->
                             let
+                                ( itemExpr, itemType ) = Located.unwrap item
+
                                 ( equations, nextIdSource ) =
                                     generateEquations currentIdSource item
                             in
@@ -251,18 +257,22 @@ generateEquations idSource ( expr, type_ ) =
 
 
 findArgumentUsages : VarName -> Typed.Expr -> List Typed.Expr
-findArgumentUsages argument bodyExpr =
-    bodyExpr
+findArgumentUsages argument located =
+    located
         |> Transform.children Typed.recursiveChildren
         |> List.filter (Typed.isArgument argument)
 
 
 generateArgumentUsageEquations : Int -> List Typed.Expr -> List TypeEquation
-generateArgumentUsageEquations argumentId usages =
+generateArgumentUsageEquations argumentId exprs =
     let
         argumentType =
             Type.Var argumentId
     in
     List.map
-        (\( _, usageType ) -> equals usageType argumentType)
-        usages
+        (\l -> equals (Typed.getType l) argumentType)
+        exprs
+
+    --List.map
+    --    (\( _, usageType ) -> equals usageType argumentType)
+    --    (Located.unwrap located)
