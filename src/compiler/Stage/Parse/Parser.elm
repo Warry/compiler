@@ -8,6 +8,7 @@ module Stage.Parse.Parser exposing
     )
 
 import AST.Common.Literal exposing (Literal(..))
+import AST.Common.Located as Located exposing (Located)
 import AST.Frontend as Frontend exposing (Expr(..))
 import Common
 import Common.Types
@@ -44,6 +45,15 @@ type alias Parser_ a =
 
 type alias ExprConfig =
     PP.Config ParseContext ParseProblem Frontend.Expr
+
+
+located : Parser_ p -> Parser_ (Located p)
+located p =
+    P.succeed Located.located
+        |= P.getPosition
+        |= P.getOffset
+        |= p
+        |= P.getOffset
 
 
 module_ : FilePath -> Parser_ (Module Frontend.Expr)

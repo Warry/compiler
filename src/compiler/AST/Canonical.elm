@@ -6,6 +6,7 @@ module AST.Canonical exposing
     )
 
 import AST.Common.Literal exposing (Literal)
+import AST.Common.Located as Located exposing (Located)
 import Common.Types
     exposing
         ( Binding
@@ -20,13 +21,11 @@ type alias ProjectFields =
     { modules : Modules Expr }
 
 
-{-| Differs from Frontend.Expr by:
+type alias Expr =
+    Located Expr_
 
-  - having fully qualified variables
-  - having only single argument lambdas
 
--}
-type Expr
+type Expr_
     = Literal Literal
     | Var { qualifier : ModuleName, name : VarName }
     | Argument VarName

@@ -7,6 +7,7 @@ module AST.Frontend exposing
     )
 
 import AST.Common.Literal exposing (Literal)
+import AST.Common.Located as Located exposing (Located)
 import Common
 import Common.Types
     exposing
@@ -19,10 +20,19 @@ import Transform
 
 
 type alias ProjectFields =
-    { modules : Modules Expr }
+    Located { modules : Modules Expr }
 
 
-type Expr
+projectFields : Modules Expr -> { modules : Modules Expr }
+projectFields m =
+    { modules = m }
+
+
+type alias Expr =
+    Located Expr_
+
+
+type Expr_
     = Literal Literal
     | Var { qualifier : Maybe ModuleName, name : VarName }
     | Argument VarName

@@ -11,6 +11,7 @@ module AST.Typed exposing
     )
 
 import AST.Common.Literal exposing (Literal)
+import AST.Common.Located as Located exposing (Located)
 import AST.Common.Type exposing (Type)
 import Common
 import Common.Types
@@ -36,7 +37,7 @@ TODO make this opaque, add accessors etc.
 
 -}
 type alias Expr =
-    ( Expr_, Type )
+    Located ( Expr_, Type )
 
 
 type Expr_
